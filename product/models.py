@@ -2,6 +2,12 @@ from django.db import models
 
 # Create your models here.
 
+class Tag(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.name
+
 class Category(models.Model):
     name = models.CharField(max_length=100)
     
@@ -13,6 +19,7 @@ class Category(models.Model):
         return self.name
 
 class Product(models.Model):
+    tags = models.ManyToManyField(Tag, blank=True)
     title = models.CharField(max_length=100)
     description = models.TextField()
     price = models.IntegerField()
@@ -40,4 +47,4 @@ class Review(models.Model):
     
     @property
     def review(self):
-        return self.text, self.stars 
+        return self.text, self.stars

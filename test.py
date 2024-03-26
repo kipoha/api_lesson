@@ -2,9 +2,9 @@ import requests
 from config import *
 
 url = URL
-category = 'categories'
-product = 'products'
-review = 'reviews'
+category = 'categories/'
+product = 'products/'
+review = 'reviews/'
 
 data_category = {
     'name': 'hehe',
@@ -14,19 +14,27 @@ data_product = {
     'title': 'kika',
     'description': 'da',
     'price': 100,
-    'category_id': 4,
+    'category_id': 5,
+    'tags': [1, 2]
 }
 
 data_review = {
     'text': 'testing...',
     'stars': 4,
-    'product_id': 3
+    'product_id': 9
 }
 
-url += review
+url += product
 
-url += '/6'
+# url += '3/'
 
-result = requests.delete(url)
+result = requests.post(url, data=data_product)
 
-print(result.status_code)
+print("Status:", result.status_code)
+# print("Content:", result.content)
+# print("Text:", result.text)
+
+try:
+    print("JSON Response:", result.json())
+except ValueError:
+    print("Response is not in JSON format")

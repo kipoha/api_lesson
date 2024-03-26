@@ -140,3 +140,4 @@ QUERYCOUNT = {
     'DISPLAY_DUPLICATES': None,
     'RESPONSE_HEADER': 'X-DjangoQueryCount-Count'
 }
+
