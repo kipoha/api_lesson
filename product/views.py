@@ -6,6 +6,7 @@ from django.db.models import Count
 
 @api_view(['GET', 'POST'])
 def category_list_view(requets):
+    print(requets.user)
     if requets.method == 'GET':
         # categories = models.Category.objects.annotate(product_count=Count('products'))
         categories = models.Category.objects.prefetch_related('products').annotate(products_count=Count('products'))
