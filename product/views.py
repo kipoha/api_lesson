@@ -3,53 +3,26 @@ from rest_framework.response import Response
 from product import serializers, models
 from rest_framework import status
 from django.db.models import Count
+from rest_framework.generics import *
+from rest_framework.pagination import *
 
-@api_view(['GET', 'POST'])
-def category_list_view(requets):
-    print(requets.user)
-    if requets.method == 'GET':
-        # categories = models.Category.objects.annotate(product_count=Count('products'))
-        categories = models.Category.objects.prefetch_related('products').annotate(products_count=Count('products'))
-        data = serializers.CategorySerializer(categories, many=True).data
-        return Response(data=data)
-    elif requets.method == 'POST':
-        serializer = serializers.ValidateCategory(data=requets.data)
-        if not serializer.is_valid():
-            return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': serializer.errors})
-        name = serializer.validated_data.get('name')
-        print(name)
-        category = models.Category.objects.create(name=name)
-        return Response(status=status.HTTP_201_CREATED, data={'id': category.id})
+class CategoryListAPI(ListCreateAPIView):
+    queryset = models.Category.objects.all()
+    serializer_class = serializers.CategorySerializer
+    pagination_class = PageNumberPagination
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def category_detail_view(requets, id):
-        try:
-            category = models.Category.objects.prefetch_related('products').annotate(product_count=Count('products')).get(id=id)
-        except models.Category.DoesNotExist:
-            return Response(data={'error': 'not found'}, status=status.HTTP_404_NOT_FOUND)
-        if requets.method == 'GET':
-            data = serializers.CategoryDetailSerializer(category).data
-            return Response(data=data)
-        elif requets.method == 'PUT':
-            serializer = serializers.ValidateCategory(data=requets.data)
-            if not serializer.is_valid():
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': serializer.errors})
-            category.name = serializer.validated_data.get('name')
-            category.save()
-            return Response(status=status.HTTP_201_CREATED, data={'status': 'done!'})
-        elif requets.method == 'DELETE':
-            category.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT, data={'status': 'deleted!'})
-            
+class CategoryDetailAPI(RetrieveUpdateDestroyAPIView):
+    queryset = models.Category.objects.all()
+    serializer_class = serializers.CategorySerializer
+    lookup_field = 'id'
 
-@api_view(['GET', 'POST'])
-def product_list_view(requets):
-    if requets.method == 'GET':
-        products = models.Product.objects.prefetch_related('category').all()
-        data = serializers.ProductSerializer(products, many=True).data
-        return Response(data=data)
-    elif requets.method == 'POST':
-        serializer = serializers.ValidateProduct(data=requets.data)
+class ProductListAPI(ListCreateAPIView):
+    queryset = models.Product.objects.prefetch_related('category', 'tags').all()
+    serializer_class = serializers.ProductSerializer
+    pagination_class = PageNumberPagination
+    
+    def create(self, request, *args, **kwargs):
+        serializer = serializers.ValidateProduct(data=request.data)
         if not serializer.is_valid():
             return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': serializer.errors})
         title = serializer.validated_data.get('title')
@@ -63,73 +36,59 @@ def product_list_view(requets):
         product.save()
         return Response(status=status.HTTP_201_CREATED, data={'id': product.id})
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def product_detail_view(requets, id):
-        try:
-            product = models.Product.objects.get(id=id)
-        except models.Product.DoesNotExist:
-            return Response(data={'error': 'not found'}, status=status.HTTP_404_NOT_FOUND)
-        if requets.method == 'GET':
-            data = serializers.ProductSerializer(product, many=False).data
-            return Response(data=data)
-        elif requets.method == 'PUT':
-            serializer = serializers.ValidateProduct(data=requets.data)
-            if not serializer.is_valid():
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': serializer.errors})
-            product.title = serializer.validated_data.get('title')
-            product.description = serializer.validated_data.get('description')
-            product.price = serializer.validated_data.get('price')
-            product.category_id = serializer.validated_data.get('category_id')
-            product.tags.set(serializer.validated_data.get('tags'))
-            product.save()
-            return Response(status=status.HTTP_201_CREATED, data={'status': 'done!'})
-        elif requets.method == 'DELETE':
-            product.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT, data={'status': 'deleted!'})
 
-@api_view(['GET', 'POST'])
-def review_list_view(requets):
-    if requets.method == 'GET':
-        reviews = models.Review.objects.prefetch_related('product').all()
-        data = serializers.ReviewSerializer(reviews, many=True).data
-        return Response(data=data)
-    elif requets.method == 'POST':
-        serializer = serializers.ValidateReview(data=requets.data)
+class ProductDetailAPI(RetrieveUpdateDestroyAPIView):
+    queryset = models.Product.objects.prefetch_related('category', 'tags').all()
+    serializer_class = serializers.ProductSerializer
+    lookup_field = 'id'
+    
+    def update(self, request, *args, **kwargs):
+        product = self.get_object()
+        serializer = serializers.ValidateProduct(product, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product.title = serializer.validated_data.get('title')
+        product.description = serializer.validated_data.get('description')
+        product.price = serializer.validated_data.get('price')
+        product.category_id = serializer.validated_data.get('category_id')
+        product.tags.set(serializer.validated_data.get('tags'))
+        product.save()
+        return Response({'status': 'done!'})
+
+class ReviewListAPI(ListCreateAPIView):
+    queryset = models.Review.objects.prefetch_related('product').all()
+    serializer_class = serializers.ReviewSerializer
+    pagination_class = PageNumberPagination
+    
+    def create(self, request, *args, **kwargs):
+        serializer = serializers.ValidateReview(data=request.data)
         if not serializer.is_valid():
             return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': serializer.errors})
         text = serializer.validated_data.get('text')
         stars = serializer.validated_data.get('stars')
-        product_id = requets.data.get('product_id')
+        product_id = serializer.validated_data.get('product_id')
 
         review = models.Review.objects.create(text=text, stars=stars, product_id=product_id)
         return Response(status=status.HTTP_201_CREATED, data={'status': 'done!'})
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def review_detail_view(requets, id):
-        try:
-            review = models.Review.objects.get(id=id)
-        except models.Review.DoesNotExist:
-            return Response(data={'error': 'not found'}, status=status.HTTP_404_NOT_FOUND)
-        if requets.method == 'GET':
-            data = serializers.ReviewSerializer(review, many=False).data
-            return Response(data=data)
-        elif requets.method == 'PUT':
-            serializer = serializers.ValidateReview(data=requets.data)
-            if not serializer.is_valid():
-                return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': serializer.errors})
-            review.text = serializer.validated_data.get('text')
-            review.stars = serializer.validated_data.get('stars')
-            review.product_id = serializer.validated_data.get('product_id')
-            review.save()
-            return Response(status=status.HTTP_201_CREATED, data={'status': 'done!'})
-        elif requets.method == 'DELETE':
-            review.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT, data={'status': 'deleted!'})
+class ReviewDetailAPI(RetrieveUpdateDestroyAPIView):
+    queryset = models.Review.objects.prefetch_related('product').all()
+    serializer_class = serializers.ReviewSerializer
+    lookup_field = 'id'
+    
+    def update(self, request, *args, **kwargs):
+        review = self.get_object()
+        serializer = serializers.ValidateReview(review, data=request.data)
+        if not serializer.is_valid():
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={'error': serializer.errors})
+        review.text = serializer.validated_data.get('text')
+        review.stars = serializer.validated_data.get('stars')
+        review.product_id = serializer.validated_data.get('product_id')
+        review.save()
+        return Response(status=status.HTTP_201_CREATED, data={'status': 'done!'})
 
-@api_view(['GET'])
-def product_review_view(requets):
-    if requets.method == 'GET':
-        products = models.Product.objects.prefetch_related('category', 'reviews').all()
-        data = serializers.ProductWithReviewsSerializer(products, many=True).data
-        return Response(data=data)
+class ProductReviewListAPI(ListAPIView):
+    queryset = models.Product.objects.prefetch_related('category', 'reviews').all()
+    serializer_class = serializers.ProductWithReviewsSerializer
+    pagination_class = PageNumberPagination
+
 

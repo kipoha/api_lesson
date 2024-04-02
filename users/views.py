@@ -11,6 +11,49 @@ from django.core.mail import send_mail
 from shop_api import settings
 import datetime 
 from django.utils import timezone
+from rest_framework.generics import *
+
+# class Register(CreateAPIView):
+#     serializer_class = serializers.UserCreateValidate
+    
+#     def perform_create(self, serializer):
+#         user = serializer.save()
+#         code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+#         expiry_date = timezone.now() + datetime.timedelta(minutes=10)
+#         user_code = models.Code.objects.create(user=user, code=code, expiry_date=expiry_date)
+#         send_mail('Verify', f'your code: {code}\n code expiration date: 10 min', settings.EMAIL_HOST_USER, recipient_list=[user.email])
+
+# class AuthUser(CreateAPIView):
+#     serializer_class = serializers.UserLoginValidate
+
+#     def perform_create(self, serializer):
+#         user = authenticate(**serializer.validated_data)
+#         if user:
+#             token, _ = Token.objects.get_or_create(user=user)
+#             return Response(data={'token': token.key})
+#         return Response(data={'error': 'user not found'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# class ConfirmUser(CreateAPIView):
+#     serializer_class = serializers.UserConfirmValidate
+
+#     def perform_create(self, serializer):
+#         code_user = models.Code.objects.filter(code=serializer.validated_data['code']).first()
+#         if not code_user:
+#             return Response(data={'code': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+#         expiry_date = timezone.now() + datetime.timedelta(minutes=10)
+#         code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+#         if code_user.expiry_date < timezone.now():
+#             code_user.delete()
+#             user_code = models.Code.objects.create(user=code_user.user, code=code, expiry_date=expiry_date)
+#             send_mail('Verify', f'your code: {code}\n code expiration date: 10min', settings.EMAIL_HOST_USER, recipient_list=[code_user.user.email])
+#             return Response(data={'error': 'code expired', 'new code': user_code.code, 'code expiration date': '10min'}, status=status.HTTP_400_BAD_REQUEST)
+        
+#         code_user.user.is_active = True
+#         code_user.user.save()
+#         code_user.delete()
+#         return Response(data={'status': 'your account is active!'}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 def reg_user_api_view(request):
